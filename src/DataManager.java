@@ -17,13 +17,71 @@ public class DataManager {
         }
     }
 
-    public void fail() {
+    public int nonReplicatedRO(int siteId, int varIndex, int time) {
+        Site site = siteTable.get(siteId);
+        List<Variable> history = site.variableTable.get(varIndex);
+        for (int i = history.size() - 1; i >= 0; i--) {
+            Variable var = history.get(i);
+            if (var.version <= time)    // find last committed value before time
+                return var.val;
+        }
+        return -1;
+    }
 
+
+    /** read replicated value from the site:
+     * If xi is replicated, RO can read xi from site s if xi was committed at s by some
+     * transaction T before RO began and s was up all the time between the time when xi
+     * was committed and RO began.
+     */
+    public String replicatedRO(int varIndex,int time,int siteId) {
+        Site site = siteTable.get(siteId);
+        List<Variable> history = site.variableTable.get(varIndex);
+        for (int i = history.size() - 1; i >= 0; i--) {
+            Variable var = history.get(i);
+            // find last committed value before time
+            if (var.version <= time) {
+                int lastCommittedValue = var.val;
+                if (alwaysUp(siteId, time, var.version))
+                    return Integer.toString(lastCommittedValue);
+                break;
+            }
+        }
+        return "No qualified value";
+    }
+
+    public boolean alwaysUp(int siteId, int readStartTime, int lastCommittedTime) {
+        List<Integer> filedTimes = siteFailTimes.get(siteId);
+        for (int i = 0; i < filedTimes.size(); i++) {
+            int t = filedTimes.get(i);
+            if (lastCommittedTime < t && t < readStartTime) // not qualified
+                return false;
+        }
+        return true;
+    }
+
+    public void write(int varIndex, int value, int siteId, int time) {
+        Site site = siteTable.get(siteId);
+        site.write(value, varIndex, time);
+    }
+
+    public void releaseLocks(int siteId, int transId) {
+        if (failedSites.get(siteId))
+            return;
+        siteTable.get(siteId).releaseLock(transId);
+    }
+
+    public void fail(int siteId, int time) {
+        Site site = siteTable.get(siteId);
+        site.siteFail();
+        failedSites.put(siteId, true);
+        siteFailTimes.get(siteId).add(time);
     }
 
     public void recover(int siteId, int time) {
-
+        Site site = siteTable.get(siteId);
+        int sz = siteFailTimes.get(siteId).size();
+        site.siteRecover(time, siteFailTimes.get(siteId).get(sz - 1));
     }
-
 
 }
