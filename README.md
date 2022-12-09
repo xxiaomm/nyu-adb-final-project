@@ -9,11 +9,8 @@ failure recovery.
 | :---------: | :--------------: |
 | Course name | Advanced Database Systems | 
 | Professor   | Dennis Shasha    |
+| Author      | Xiao Ma, Junru He|
+| Language    | Java             |
 
 [Requirements](https://cs.nyu.edu/courses/fall22/CSCI-GA.2434-001/handDB2.pdf)
 
-### Authors
-
-- Xiao Ma:
-- Junru He:
-  
